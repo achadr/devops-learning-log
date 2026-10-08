@@ -1,0 +1,25 @@
+[Unit]
+Description=Boutique Velocite - serveur de rendu
+After=network-online.target
+Wants=network-online.target
+StartLimitBurst=4
+StartLimitIntervalSec=120
+[Service]
+Type=simple
+User=velocite
+Group=velocite
+WorkingDirectory=/opt/velocite
+EnvironmentFile=/etc/velocite/velocite.env
+ExecStart=/usr/bin/node /opt/velocite/server.js
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+LogsDirectory=velocite
+LogsDirectoryMode=0750
+[Install]
+WantedBy=multi-user.target
