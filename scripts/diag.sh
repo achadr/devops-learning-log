@@ -11,11 +11,11 @@ section() {
 
 if [[ $EUID -eq 0 ]]; then
     SUDO=""
-elif command -v sudo >/dev/null 2>&1; then
+elif sudo -n true 2>/dev/null; then
     SUDO="sudo"
 else
     SUDO=""
-    echo "[AVERTISSEMENT] Ni root ni sudo disponible : les sections RESEAU et LOGS seront incomplètes." >&2
+    echo "[AVERTISSEMENT] Privileges root indisponibles sans mot de passe : sections RESEAU et LOGS incompletes." >&2
 fi
 
 main() {
