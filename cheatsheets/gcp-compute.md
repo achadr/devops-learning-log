@@ -95,6 +95,31 @@ Question ouverte : un petit script dans Cloud Storage via `startup-script-url` �
 
 ---
 
+## 4. Lab GSP001 « Create a Virtual Machine » — mesuré le 28/10 (100/100)
+
+| Observé | Ce que ça montre |
+|---|---|
+| onglets *General purpose, Compute, Memory, Network, Storage, GPUs, TPUs* | les familles, dans la console |
+| `e2-medium` : 2 vCPU, 4 Go, « 1 shared core » | série E2, famille à usage général |
+| « Balanced persistent disk », 10 Go · calendrier d'instantanés par défaut | disque persistant |
+| cocher « Allow HTTP traffic » → étiquette **`http-server`** | une étiquette **sélectionne** la VM |
+| `default-allow-http` : `tcp:80` → cible `http-server` · ssh, rdp, icmp, internal : sans cible | la règle s'applique aux VM étiquetées |
+| `gcelab2` créée par `gcloud` : **aucune étiquette** | son port 80 ne serait pas ouvert |
+| nginx : maître **root**, 2 workers **`www-data`** | moindre privilège, un worker par vCPU |
+| IP interne `10.128.0.3`, externe `34.66.21.47` | l'externe est traduite en amont |
+| ⚠ compte attaché aux deux VM : **compte par défaut** `…-compute@developer…`, avec **`roles/editor`** | ce qu'il faut éviter, mesuré (QCM Q4 : ⚠ « agent de service ») |
+| instantané `gcelab-snap` : emplacement **`us`**, **695,34 Mo** pour 10 Go | multirégion · seuls les blocs utilisés |
+
+```bash
+gcloud compute instances describe gcelab --zone=$ZONE --format="yaml(tags,serviceAccounts)"
+gcloud compute firewall-rules list --format="table(name,allowed,targetTags)"
+```
+
+⚠⚠ **Dans un lab, aucune ressource hors manuel** : l'aide de Google Skills prévient qu'au-delà, le
+lab s'arrête et le compte peut être bloqué. Les commandes de **lecture** restent sûres.
+
+---
+
 Sources : [Types de machines](https://docs.cloud.google.com/compute/docs/machine-types) ·
 [Machines à mémoire optimisée](https://docs.cloud.google.com/compute/docs/memory-optimized-machines?hl=fr) ·
 [gcloud compute instances stop](https://docs.cloud.google.com/sdk/gcloud/reference/compute/instances/stop) ·
