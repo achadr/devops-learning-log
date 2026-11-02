@@ -209,3 +209,39 @@ ip route                     # les blocs joignables, 0.0.0.0/0 = défaut
 - dans `ipcalc`, l'**espace** dans l'affichage binaire marque la frontière du préfixe
 - le **wildcard** est le complément du masque (`0.0.15.255` pour `/20`) et donne la largeur
 - `Hosts/Net` = total − 2 — ne tient **pas** compte des 4 de GCP
+
+
+---
+
+## LAB-05 — découper `10.50.0.0/16` (30/10, vérifié avec `ipaddress` ; QCM du 02/11)
+
+⚠ **Couvrir tout le /16, ou garder de la réserve** (QCM du 02/11, Q9 : « /20 » pour 4 blocs qui couvrent tout) :
+
+| Découpage | Blocs dans le /16 | Adresses par bloc | Pas (3ᵉ octet) | Pour 4 environnements |
+|---|---|---|---|---|
+| **/18** | 4 | 16 384 | 64 | les 4 couvrent **tout** : aucune réserve |
+| **/20** | 16 | 4 096 | 16 | 4 utilisés, **12 en réserve** ✅ bonne pratique |
+
+```
+/18   10.50.0.0  · 10.50.64.0  · 10.50.128.0 · 10.50.192.0
+/20   10.50.0.0  · 10.50.16.0  · 10.50.32.0  · 10.50.48.0  · ⚠ réserve à partir de 10.50.64.0 (pas .65)
+```
+
+⚠ **Ajouter des bits** (oral du 30/10 : « 2¹⁰ + 2⁴ = 1 040 ») :
+**les exposants s'additionnent, les nombres se multiplient.**
+`n` bits de plus → **2ⁿ** fois plus de blocs · `k` bits libres → **2ᵏ** adresses.
+2¹⁴ = 1 024 × 16 = **16 384** · 2¹² = 1 024 × 4 = **4 096**
+
+**Pourquoi la réserve :** couper plus tard un /18 en deux /19 oblige à **renuméroter** les machines déjà
+adressées dans la moitié libérée.
+
+**Chevauchement :** `10.50.64.0/18` couvre le 3ᵉ octet de **64 à 127** → `10.50.100.0/24` tombe dedans.
+
+```bash
+python3 -c "import ipaddress; [print(n, n.num_addresses) for n in ipaddress.ip_network('10.50.0.0/16').subnets(new_prefix=18)]"
+python3 -c "import ipaddress; [print(n) for n in list(ipaddress.ip_network('10.50.0.0/16').subnets(new_prefix=20))[:5]]"
+python3 -c "import ipaddress; print(ipaddress.ip_network('10.50.64.0/18').overlaps(ipaddress.ip_network('10.50.100.0/24')))"
+```
+
+**Correctif (dette du 16/10) :** une adresse de **diffusion** est relative au préfixe :
+`192.168.1.255` est la diffusion en `/24`, mais une adresse ordinaire en `/16`.
