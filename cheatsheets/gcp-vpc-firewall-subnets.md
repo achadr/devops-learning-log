@@ -94,3 +94,62 @@ Sources : [VPC networks](https://docs.cloud.google.com/vpc/docs/vpc) ·
 [Subnets](https://docs.cloud.google.com/vpc/docs/subnets) ·
 [VPC firewall rules](https://docs.cloud.google.com/firewall/docs/firewalls) ·
 [VPC Network Peering](https://docs.cloud.google.com/vpc/docs/vpc-peering)
+
+---
+
+## 5. Priorités et règles de sortie (03/11)
+
+> QCM du 04/11 : **19/20**. ⚠ = raté réel.
+> Lab *Configuring VPC Firewalls* (GSP, catalogue 1430) : **100/100**.
+
+### L'ordre d'évaluation
+
+| | |
+|---|---|
+| Plage | **0 à 65535** · défaut **1000** |
+| Ordre | le **plus petit numéro** est évalué en premier · la première règle qui correspond s'applique |
+| allow contre deny | deny l'emporte **seulement à priorité égale** |
+| Règles implicites | tout en bas : **65535** (`default-allow-*` : 65534) |
+| Construire | règle générale **en bas** (grand nombre), exceptions **au-dessus** (plus petit) |
+
+> C'est l'inverse du `z-index` : le plus **petit** gagne.
+> « Much higher priority of 10,000 » (manuel) = **très basse** priorité. Lire le nombre, pas le mot.
+
+### Entrée et sortie
+
+| | **Entrée** | **Sortie** |
+|---|---|---|
+| ⚠ La cible est la VM qui… | **reçoit** | **envoie** |
+| Implicite | refusée | **autorisée** |
+| Autre extrémité | source | destination (défaut `0.0.0.0/0`) |
+
+- Un trafic passe seulement si **la sortie de l'expéditeur ET l'entrée du destinataire** l'autorisent.
+- Les priorités d'entrée et de sortie **ne se comparent pas** : deux listes séparées.
+- À état : la **réponse** d'une connexion autorisée ne peut pas être refusée.
+
+### Lab — les 4 règles de `mynetwork`, mesurées
+
+| Règle | Sens | Priorité | Effet observé |
+|---|---|---|---|
+| `allow-ssh-from-cs` (tcp:22, source = IP de Cloud Shell, cible `lab-ssh`) | entrée | 1000 | SSH depuis Cloud Shell ✅ · bouton SSH de la console ✗ |
+| `allow-icmp-internal` (source `10.128.0.0/9`, sans cible) | entrée | 1000 | ping interne ✅ (25 ms, us-central1 ↔ us-east4) |
+| `deny-icmp-all` | entrée | 500 → **2000** | à 500 : ping ✗ · à 2000 : ping ✅ |
+| `egress-deny-icmp-all` | **sortie** | 10000 | ping ✗ malgré l'allow d'entrée |
+
+Autres mesures :
+- réseau sans règle → SSH **en attente** : paquet **jeté**, aucune réponse (comme `DROP`)
+- ping de l'adresse **externe** ✗ : la source devient l'**IP externe de l'expéditeur**, hors de `10.128.0.0/9`
+- deux VM de deux VPC avec la **même** adresse `10.128.0.2` → deux réseaux auto ne s'appairent pas
+- `mynetwork` (auto) : **2 sous-réseaux** seulement, le projet n'autorisant que 2 régions (`gcp.resourceLocations`)
+- `gcloud` sur la VM → *insufficient authentication scopes* : **7 scopes par défaut, aucun pour Compute Engine**
+
+```bash
+gcloud compute firewall-rules create <nom> --network <réseau> --action DENY --direction EGRESS \
+  --rules icmp --priority 10000
+gcloud compute firewall-rules update <nom> --priority 2000
+gcloud compute firewall-rules list --filter="network:<réseau>"
+gcloud compute instances add-tags <VM> --zone=<zone> --tags lab-ssh
+gcloud compute instances describe <VM> --zone=<zone> --format="yaml(serviceAccounts)"
+```
+
+Source : [VPC firewall rules](https://docs.cloud.google.com/firewall/docs/firewalls)
